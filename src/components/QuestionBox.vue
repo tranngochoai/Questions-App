@@ -7,7 +7,7 @@
       <hr class="my-4">
       <b-list-group class="pb-4">
         <b-list-group-item
-          :class="[selectIndex === index ? 'selected':'' ]"
+          :class="answerClass(index)"
           v-for="(answer, index) in answers"
           :key="index"
           @click="selectAnswer(index)">
@@ -17,7 +17,9 @@
       <b-button 
         class="mx-2" 
         variant="primary"
-        @click="submitAnswer">
+        @click="submitAnswer"
+        :disabled="selectIndex === null || answered "
+        >
 
         Submit</b-button>
       <b-button 
@@ -34,12 +36,15 @@ import _ from 'lodash'
 export default {
   props: {
     currentQuestion: {},
-    next: Function //like PropType in reactjs
+    next: Function,
+    increment: Function //like PropType in reactjs
   },
   data() {
     return {
       selectIndex: null,
-      shuffledAnswers: []
+      shuffledAnswers: [],
+      correctIndex: null,
+      answered: false
     }
   },
   methods: {
@@ -50,14 +55,26 @@ export default {
       let { currentQuestion } = this
       let answers = [...currentQuestion.incorrect_answers, currentQuestion.correct_answer]
       this.shuffledAnswers = _.shuffle(answers)
+      this.correctIndex = this.shuffledAnswers.indexOf(currentQuestion.correct_answer)
     },
     submitAnswer() {
       let isCorrect = false;
       if(this.selectIndex === this.correctIndex) {
         isCorrect = true;
       }
-      this.increment(isCorrect)
-      console.log(this.answers[this.selectIndex], this.currentQuestion.correct_answer)
+      this.answered = true
+      this.increment(isCorrect)//props isCorrect from component father
+    },
+    answerClass(index) {
+      let answerClass = '';
+      if(!this.answered && this.selectIndex === index ) {
+        answerClass = 'selected'
+      } else if( this.answered && this.correctIndex === index) {
+        answerClass = 'correct'
+      } else if(this.answered && this.selectIndex === index && this.correctIndex !== index) {
+        answerClass = 'incorrect'
+      }
+      return answerClass
     }
   },
   mounted() {
@@ -67,8 +84,9 @@ export default {
       currentQuestion: {
         immediate: true,//it alow watch run when initialization component mouted
         handler() {
-          this.selectIndex = null;
-          this.shuffleAnswers();
+          this.selectIndex = null
+          this.answered = false
+          this.shuffleAnswers()
         }
       }
   },
@@ -77,7 +95,6 @@ export default {
       let { currentQuestion } = this
       let answers = [...currentQuestion.incorrect_answers]
       answers.push(currentQuestion.correct_answer)
-      console.log('computed')
       return answers
       //return answers.push(this.currentQuestion.incorrect_answers)// return length array
     }
